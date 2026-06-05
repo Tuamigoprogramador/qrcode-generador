@@ -1,0 +1,343 @@
+TU AMIGO PROGRAMADOR - 2026
+================================================================================
+================================================================================
+GUÍA COMPLETA DE TIPOS DE CÓDIGOS QR Y SINTAXIS DE DATOS (LIBRERÍA 'QRCODE')
+================================================================================
+
+Este documento contiene algunas de las especificación de los parámetros de
+configuración de la librería 'qrcode' de Python, así como la estructura y 
+sintaxis exacta de los datos requeridos para generar cada tipo de código QR.
+
+--------------------------------------------------------------------------------
+1. PARÁMETROS DE CONFIGURACIÓN DE LA CLASE `qrcode.QRCode`
+--------------------------------------------------------------------------------
+
+Cuando se instancia un objeto QR con `qr = qrcode.QRCode(...)`, se pueden 
+configurar los siguientes atributos físicos y de comportamiento:
+
+* version (int, 1 a 40 o None):
+  - Controla el tamaño de la matriz del código QR.
+  - La versión 1 genera una cuadrícula de 21x21 módulos. Cada versión superior 
+    añade exactamente 4 módulos por lado (ej. Versión 2 es de 25x25).
+  - Si se define como 'None' y se usa 'fit=True' al ejecutar `make()`, la 
+    librería calcula automáticamente el tamaño mínimo necesario según el volumen 
+    de los datos introducidos.
+
+* error_correction (Constante) [NO MUY RELEVANTE]:
+  - Determina el nivel de redundancia de datos (tolerancia a daños, suciedad o 
+    personalización con logotipos). Existen 4 niveles:
+    - qrcode.constants.ERROR_CORRECT_L: Recupera hasta el 7% de datos perdidos.
+    - qrcode.constants.ERROR_CORRECT_M: Recupera hasta el 15% (Por defecto).
+    - qrcode.constants.ERROR_CORRECT_Q: Recupera hasta el 25% de datos perdidos.
+    - qrcode.constants.ERROR_CORRECT_H: Recupera hasta el 30% de datos perdidos.
+      (Obligatorio si se desea insertar una imagen o logo en el centro del QR).
+
+* box_size (int):
+  - Define cuántos píxeles de ancho y alto medirá cada cuadro (módulo) 
+    individual del QR en el archivo de imagen resultante. Por ejemplo, un 
+    valor de 10 significa que cada punto tendrá 10x10 píxeles.
+
+* border (int):
+  - Controla el grosor del margen blanco exterior (también llamado 'zona de 
+    silencio') alrededor del QR. El valor se mide en cantidad de cuadros (no 
+    en píxeles). El estándar internacional (ISO/IEC 18004) exige un mínimo de 4.
+
+* image_factory (Clase de fábrica):
+  - Permite cambiar el formato del renderizado de salida. Por defecto utiliza 
+    PIL/Pillow (generando imágenes rasterizadas como PNG). Puede cambiarse por:
+    - qrcode.image.svg.SvgImage (Para generar SVG vectoriales puros).
+    - qrcode.image.pure.PyPNGImage (Para PNG sin depender de Pillow).
+
+--------------------------------------------------------------------------------
+2. TABLA MAESTRA DE TIPOS DE QR Y SINTAXIS DE DATOS (.add_data)
+--------------------------------------------------------------------------------
+
+El comportamiento que el smartphone ejecuta al escanear el QR (abrir una web, 
+conectar a un WiFi, añadir un contacto) depende de la estructura del string que 
+se pase al método `qr.add_data()`.
+
+A continuación, se detalla la sintaxis exacta de todos los tipos soportados:
+
+================================================================================
+TIPO 1: TEXTO PLANO / NOTAS
+================================================================================
+* Descripción: Muestra un bloque de texto plano en la pantalla del lector. No 
+  dispara ninguna acción automática en el sistema operativo.
+* Esquema/Prefijo: Ninguno
+* Sintaxis: [Texto libre sin formatos especiales]
+* Ejemplo de código:
+  qr.add_data("ID de Inventario: 98432-A. Bloque C, Estantería 4.")
+
+================================================================================
+TIPO 2: ENLACE / URL (PÁGINA WEB)
+================================================================================
+* Descripción: Abre automáticamente el navegador web predeterminado del teléfono 
+  en la dirección indicada.
+* Esquema/Prefijo: https:// o http://
+* Sintaxis: https://[dominio]/[ruta_u_opciones]
+* Ejemplo de código:
+  qr.add_data("https://www.google.com")
+  qr.add_data("https://github.com/lincolnloop/python-qrcode")
+
+================================================================================
+TIPO 3: RED WI-FI
+================================================================================
+* Descripción: Conecta de forma automática el dispositivo a una red inalámbrica 
+  configurando el SSID y la contraseña sin necesidad de que el usuario la teclee.
+* Esquema/Prefijo: WIFI:
+* Sintaxis: WIFI:T:[TIPO_SEGURIDAD];S:[SSID_DE_RED];P:[PASSWORD];H:[true|false];;
+  - T: Tipo de seguridad (WPA, WEP, o se deja vacío si es una red abierta).
+  - S: Nombre de la red Wi-Fi (sensible a mayúsculas/minúsculas).
+  - P: Contraseña de la red (si no tiene, se deja vacío, ej: P:;).
+  - H: Opcional. 'true' si es una red con SSID oculto.
+* Ejemplo de código:
+  qr.add_data("WIFI:T:WPA;S:MiRedSecreta_5G;P:P@ssw0rd2026;H:false;;")
+
+================================================================================
+TIPO 4: TARJETA DE CONTACTO COMPLETA (vCard v3.0)
+================================================================================
+* Descripción: Abre la aplicación de contactos del teléfono móvil mostrando toda 
+  la información lista para guardarse (Nombre, teléfono, email, empresa, etc.).
+* Esquema/Prefijo: BEGIN:VCARD
+* Sintaxis: Formato multilínea estándar. Cada campo va separado por un salto de 
+  línea (
+) y debe cerrarse de forma obligatoria con END:VCARD.
+* Ejemplo de código:
+  vcard_data = (
+      "BEGIN:VCARD
+"
+      "VERSION:3.0
+"
+      "N:Gomez;Carlos;;Ing.;
+"
+      "FN:Carlos Gomez
+"
+      "ORG:Empresa Global S.A.
+"
+      "TITLE:Director de Tecnologia
+"
+      "TEL;TYPE=CELL,VOICE:+34600000000
+"
+      "TEL;TYPE=WORK,VOICE:+34910000000
+"
+      "EMAIL;TYPE=PREF,INTERNET:carlos.gomez@empresa.com
+"
+      "URL:https://www.empresaglobal.com
+"
+      "ADR;TYPE=WORK:;;Calle Mayor 123;Madrid;;28001;Espana
+"
+      "END:VCARD"
+  )
+  qr.add_data(vcard_data)
+
+================================================================================
+TIPO 5: CONTACTO SIMPLIFICADO (MECARD)
+================================================================================
+* Descripción: Alternativa compacta a vCard, ideal para códigos QR que necesitan 
+  ser pequeños físicamente, ya que consume menos caracteres. Soportado en Android 
+  e iOS de manera nativa.
+* Esquema/Prefijo: MECARD:
+* Sintaxis: MECARD:N:[Apellido],[Nombre];TEL:[Telefono];EMAIL:[Email];URL:[Web];;
+* Ejemplo de código:
+  qr.add_data("MECARD:N:Perez,Ana;TEL:+34611111111;EMAIL:ana@mail.com;URL:https://ana.dev;;")
+
+================================================================================
+TIPO 6: MENSAJE DIRECTO DE WHATSAPP
+================================================================================
+* Descripción: Abre la aplicación de WhatsApp en el chat del número indicado con 
+  un mensaje de texto ya redactado en el cuadro de envío.
+* Esquema/Prefijo: https://wa.me/
+* Sintaxis: https://wa.me/[Telefono_Formato_Internacional]?text=[Texto_Codificado]
+  - El número de teléfono NO debe llevar el símbolo '+', ni espacios ni guiones.
+  - El texto debe estar codificado para URL (espacios como %20, etc.).
+* Ejemplo de código:
+  qr.add_data("https://wa.me/34600000000?text=Hola,%20solicito%20informacion%20del%20curso")
+
+================================================================================
+TIPO 7: ENVIAR SMS
+================================================================================
+* Descripción: Abre la aplicación de mensajería nativa (SMS) cargando el número 
+  del destinatario y el cuerpo del mensaje de texto.
+* Esquema/Prefijo: SMSTO:
+* Sintaxis: SMSTO:[Numero_Telefono]:[Mensaje_A_Enviar]
+* Ejemplo de código:
+  qr.add_data("SMSTO:+34600000000:ALTA SERVICIO")
+
+================================================================================
+TIPO 8: LLAMADA TELEFÓNICA
+================================================================================
+* Descripción: Abre la app de marcado telefónico con el número ya escrito, 
+  requiriendo solo que el usuario presione el botón de llamar.
+* Esquema/Prefijo: tel:
+* Sintaxis: tel:[Numero_Telefono] (Se recomienda incluir código de país).
+* Ejemplo de código:
+  qr.add_data("tel:+34600000000")
+
+================================================================================
+TIPO 9: CORREO ELECTRÓNICO (SOLO DESTINATARIO O COMPLETO)
+================================================================================
+* Descripción: Abre la aplicación de correo predeterminada (Outlook, Gmail, Apple 
+  Mail). Puede configurarse para rellenar solo el destinatario o todo el email.
+* Esquema/Prefijo: mailto:
+* Sintaxis Simple: mailto:[Direccion_Email]
+* Sintaxis Completa: mailto:[Email]?subject=[Asunto_URL]&body=[Cuerpo_URL]
+* Ejemplo de código (Simple):
+  qr.add_data("mailto:soporte@empresa.com")
+* Ejemplo de código (Completo):
+  qr.add_data("mailto:ventas@empresa.com?subject=Pedido%20Nueva%20Suscripcion&body=Hola%20equipo,%20quiero%20comprar...")
+
+================================================================================
+TIPO 10: GEOLOCALIZACIÓN (MAPAS)
+================================================================================
+* Descripción: Abre la aplicación de mapas del dispositivo (Google Maps, Apple 
+  Maps) apuntando exactamente a las coordenadas geográficas introducidas.
+* Esquema/Prefijo: geo:
+* Sintaxis: geo:[Latitud],[Longitud],[Altitud_Opcional]
+* Ejemplo de código:
+  qr.add_data("geo:40.416775,-3.703790") # Coordenadas de la Puerta del Sol, Madrid
+
+================================================================================
+TIPO 11: EVENTO DE CALENDARIO (iCalendar / vEvent)
+================================================================================
+* Descripción: Agrega un evento de forma automática a la aplicación de calendario 
+  del usuario (Google Calendar, iCal, Outlook) con fecha, hora y ubicación.
+* Esquema/Prefijo: BEGIN:VCALENDAR
+* Sintaxis: Formato estructurado multilínea. Las fechas deben seguir el estándar 
+  militar/ISO UTC (AAAAMMDDTHHMMSSZ).
+* Ejemplo de código:
+  cal_data = (
+      "BEGIN:VCALENDAR
+"
+      "VERSION:2.0
+"
+      "BEGIN:VEVENT
+"
+      "SUMMARY:Conferencia Python 2026
+"
+      "DESCRIPTION:Lanzamiento y guias de desarrollo
+"
+      "LOCATION:Auditorio Central, Madrid
+"
+      "DTSTART:20261015T090000Z
+"  # 15 de Octubre 2026, 09:00 UTC
+      "DTEND:20261015T180000Z
+"    # 15 de Octubre 2026, 18:00 UTC
+      "END:VEVENT
+"
+      "END:VCALENDAR"
+  )
+  qr.add_data(cal_data)
+
+--------------------------------------------------------------------------------
+3. ESTILIZACIÓN AVANZADA, COLORES Y LOGOTIPOS (PILLOW + QRCODE)
+--------------------------------------------------------------------------------
+
+Para transformar un código QR básico en un elemento de identidad visual o de 
+marca personalizado, es necesario combinar la fábrica de imágenes de Pillow 
+('PIL') con operaciones de procesamiento de capas.
+
+================================================================================
+A. PERSONALIZACIÓN DE COLORES PLANOS
+================================================================================
+La forma más directa de aplicar estilo es modificando las propiedades 
+'fill_color' (módulos/código) y 'back_color' (fondo) al invocar el método 
+`make_image()`. 
+
+Acepta tuplas RGB, nombres estandarizados de colores HTML o códigos hexadecimales.
+
+Ejemplo de código:
+-----------------
+import qrcode
+
+qr = qrcode.QRCode(version=3, box_size=10, border=4)
+qr.add_data("https://tuamigoprogramador.com")
+qr.make(fit=True)
+
+# Generar imagen con fondo azul oscuro y módulos blancos
+img = qr.make_image(fill_color="#FFFFFF", back_color="#0F172A")
+img.save("qr_colores.png")
+
+
+================================================================================
+B. INCORPORACIÓN DE LOGOTIPO EN EL CENTRO (PASO A PASO)
+================================================================================
+Para incrustar un logo de manera segura sin destruir la legibilidad, se deben 
+cumplir tres reglas estrictas:
+1. Usar obligatoriamente el nivel de corrección qrcode.constants.ERROR_CORRECT_H.
+2. Asegurar que el logo no ocupe más del 20% o 25% de la superficie total.
+3. Convertir la imagen final a modo RGBA para poder manipular canales de 
+   transparencia.
+
+Ejemplo de código:
+-----------------
+import qrcode
+from PIL import Image
+
+# 1. Instanciar QR con Máxima Corrección de Errores (Nivel H)
+qr = qrcode.QRCode(
+    version=None,
+    error_correction=qrcode.constants.ERROR_CORRECT_H,
+    box_size=10,
+    border=4
+)
+qr.add_data("https://tuamigoprogramador.com")
+qr.make(fit=True)
+
+# 2. Renderizar el QR base y pasarlo a modo RGBA (Color de 32 bits)
+qr_img = qr.make_image(fill_color="#1E293B", back_color="#FFFFFF").convert("RGBA")
+
+# 3. Abrir el archivo del logotipo (preferiblemente PNG transparente)
+logo_path = "logo.png"  
+logo = Image.open(logo_path).convert("RGBA")
+
+# 4. Calcular dimensiones óptimas para el logotipo
+qr_width, qr_height = qr_img.size
+# El tamaño del logo no debe superar 1/5 del tamaño total del QR
+logo_max_size = qr_width // 5 
+logo.thumbnail((logo_max_size, logo_max_size), Image.Resampling.LANCZOS)
+
+# 5. Calcular las coordenadas exactas de centrado
+logo_width, logo_height = logo.size
+xmin = (qr_width - logo_width) // 2
+ymin = (qr_height - logo_height) // 2
+
+# 6. Crear un fondo blanco liso detrás del logo para mayor contraste
+# Esto evita que los patrones internos del QR interfieran visualmente con el logo
+bg_box = Image.new("RGBA", (logo_width + 8, logo_height + 8), "#FFFFFF")
+qr_img.paste(bg_box, (xmin - 4, ymin - 4), bg_box)
+
+# 7. Superponer el logo utilizando su canal alfa como máscara de transparencia
+qr_img.paste(logo, (xmin, ymin), logo)
+
+# 8. Guardar resultado final
+qr_img.save("qr_con_logo.png")
+
+
+================================================================================
+C. RECOMENDACIONES CRÍTICAS DE CALIDAD Y ACCESIBILIDAD
+================================================================================
+
+* Regla de Oro del Contraste: Los escáneres de los smartphones leen las zonas 
+  oscuras y reflejan las claras. Invertir este patrón (hacer el fondo oscuro 
+  y el código claro) rompe la compatibilidad con muchas aplicaciones de cámaras 
+  nativas antiguas. Mantén siempre un ratio de contraste mínimo de 4.5:1.
+
+* Aislamiento Visual del Logotipo: Si el logotipo tiene partes transparentes o 
+  colores similares a los del QR, añade un lienzo de fondo sólido ('bg_box' en 
+  el script superior) justo detrás de él. Dejar que los módulos del QR pasen 
+  libremente por debajo de un logo transparente confunde gravemente al software 
+  de decodificación.
+
+* Densidad vs. Versión: Al agregar un logotipo, destruyes deliberadamente 
+  hasta un 30% de los datos del QR. Si el string original de datos es muy largo 
+  (como una vCard o un evento de calendario), la densidad aumentará, haciendo 
+  los cuadros diminutos. En esos casos, incrementa el parámetro 'box_size' a un 
+  rango entre 12 y 15 para facilitar el enfoque físico de la cámara.
+
+* Pruebas de Campo Obligatorias: Antes de mandar a producción o impresión 
+  masiva cualquier QR estilizado, se debe validar su lectura bajo 3 
+  condiciones de estrés:
+  - Pantalla al 50% de brillo.
+  - Entorno con luz ambiental muy baja.
+  - Distancia de escaneo superior a 1 metro.
+--------------------------------------------------------------------------------
